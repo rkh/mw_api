@@ -37,6 +37,11 @@ class MediaWiki
 
   end
 
+  def self.wikipedia lang = :en
+    @wp ||= {}
+    @wp[lang.to_sym] ||= self.new "http://#{lang}.wikipedia.org/w/api.php"
+  end
+
   attr_reader :agent
 
   def initialize uri
@@ -82,7 +87,7 @@ class MediaWiki
     result["query"]["pages"].first["revisions"].first["*"]
   end
 
-  def site_info
+  def siteinfo
     @site_info ||= api(:action => :query, :meta => :siteinfo)["query"]["general"]
   end
 
@@ -100,12 +105,12 @@ class MediaWiki
   end
 
   def inspect # :nodoc:
-    "#<#{site_info["sitename"]} (#{site_info["lang"]}), #{@uri.inspect}>"
+    "#<#{siteinfo["sitename"]} (#{siteinfo["lang"]}), #{@uri.inspect}>"
   end
 
   def colorized_inspect # :nodoc:
-    ANSICode.white + "#<" + ANSICode.yellow + site_info["sitename"] +
-    " (#{site_info["lang"]})" + ANSICode.white + ", #{@uri.colorized_inspect}>"
+    ANSICode.white + "#<" + ANSICode.yellow + siteinfo["sitename"] +
+    " (#{siteinfo["lang"]})" + ANSICode.white + ", #{@uri.colorized_inspect}>"
   end
 
   alias_method :api, :api_request
