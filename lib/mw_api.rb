@@ -91,10 +91,10 @@ class MediaWiki
       params = options.extract_options!.symbolize_keys.merge :action => name
       api options, params
     rescue ApiError => e
-      if e.code == "unknown_action"
-        super(name, *options, &block)
-      else
-        raise e
+      case e.code
+      when "mustbeposted";   api :post, options, params
+      when "unknown_action"; super(name, *options, &block)
+      else raise e
       end
     end
   end
