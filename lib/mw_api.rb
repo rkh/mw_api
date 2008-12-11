@@ -1,4 +1,4 @@
-%w[ rubygems uri thread curb ].each { |lib| require lib }
+%w[ rubygems uri thread curb active_support ].each { |lib| require lib }
 
 class MediaWiki
 
@@ -36,23 +36,43 @@ class MediaWiki
 
   end
 
-  def self.wikipedia lang = :en
-    @wp ||= {}
-    @wp[lang.to_sym] ||= self.new "http://#{lang}.wikipedia.org/w/api.php"
+  def self.wikipedia lang = :en, options = {}
+    if lang.is_a? Hash
+      lang.symbolize_keys!
+      lang, options = (options[:lang] || :en), lang
+    end
+    self.new "http://#{lang}.wikipedia.org/w/api.php", options
   end
 
   attr_reader :agent
 
-  def initialize uri
-    @uri   = uri
-    @mutex = Mutex.new
-    @agent = Curl::Easy.new do |curb|
+  def initialize uri, options = {}
+    options.symbolize_keys!
+    options.reverse_merge! :verbose => false
+    options.assert_valid_keys :verbose, :user_agent
+    @verbose = options[:verbose]
+    @uri     = uri
+    @mutex   = Mutex.new
+    @agent   = Curl::Easy.new do |curb|
       curb.enable_cookies        = true
       curb.follow_location       = true
       curb.multipart_form_post   = true
-      curb.headers["User-Agent"] = "Mozilla/5.0 (compatible; MediaWiki Client " +
-                                   "#{VERSION}; #{RUBY_PLATFORM})"
+      curb.headers["User-Agent"] = options[:user_agent] ||
+                                   "Mozilla/5.0 (compatible; MediaWiki Client " +
+                                     "#{VERSION}; #{RUBY_PLATFORM})"
     end
+  end
+
+  def verbose?
+    @verbose
+  end
+
+  def verbose!
+    @verbose = true
+  end
+
+  def silent!
+    @verbose = false
   end
 
   def http_request url, post = false
@@ -67,8 +87,9 @@ class MediaWiki
     options.flatten!
     uri       = URI.parse @uri
     params    = options.extract_options!.symbolize_keys.merge :format => :yaml
-    post      = options.delete :post
+    post      = !!options.delete(:post)
     uri.query = params.to_param
+    verbose "#{post ? "POST" : "GET"}: #{params.inspect}"
     result    = http_request uri, post
     begin
       raise ArgumentError unless result && result[0..3] == "---\n"
@@ -88,7 +109,7 @@ class MediaWiki
   end
 
   def siteinfo
-    @site_info ||= api(:action => :query, :meta => :siteinfo)["query"]["general"]
+    @siteinfo ||= api(:action => :query, :meta => :siteinfo)["query"]["general"]
   end
 
   def method_missing name, *options, &block
@@ -116,5 +137,11 @@ class MediaWiki
 
   alias_method :api, :api_request
   alias_method :get, :page_content
+
+  private
+
+  def verbose text = "", &block
+    $stderr.puts(block ? block.call : text) if verbose?
+  end
 
 end
