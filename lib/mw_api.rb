@@ -21,12 +21,11 @@ class MediaWiki
           @text = $2
         else
           @code = "unknown"
-          @info = error.to_s
+          @info = (error.to_s rescue error)
         end
         @text ||= @info
-      rescue Exception => error
-        puts "Fehler"
-        error = nil
+      rescue Exception => e
+        error = e
         retry
       end
     end
