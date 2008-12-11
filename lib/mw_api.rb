@@ -67,8 +67,9 @@ class MediaWiki
     options.flatten!
     uri       = URI.parse @uri
     params    = options.extract_options!.symbolize_keys.merge :format => :yaml
+    post      = options.delete :post
     uri.query = params.to_param
-    result    = http_request uri, options.include?(:post)
+    result    = http_request uri, post
     begin
       raise ArgumentError unless result && result[0..3] == "---\n"
       result = YAML.load(result) || {}
