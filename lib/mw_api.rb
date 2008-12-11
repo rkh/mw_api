@@ -109,8 +109,9 @@ class MediaWiki
   end
 
   def colorized_inspect # :nodoc:
+    return inspect unless defined? ANSICode
     ANSICode.white + "#<" + ANSICode.yellow + siteinfo["sitename"] +
-    " (#{siteinfo["lang"]})" + ANSICode.white + ", #{@uri.colorized_inspect}>"
+      " (#{siteinfo["lang"]})" + ANSICode.white + ", #{@uri.colorized_inspect}>"
   end
 
   alias_method :api, :api_request
