@@ -1,7 +1,37 @@
+# TODO:
+# - get independend from active_support
+# - make curb optional
+# - run on rubinius
 %w[ rubygems uri thread curb active_support ].each { |lib| require lib }
 
+# This is a generic interface to the MediaWiki API.
+# Instead of implementing all the API functions available (and thus probably
+# become outdated at some point soon) it has a very low level method
+# +api_request+  taking the parameters usually send to MW's api.php and parses
+# the result, thus in most cases return a hash. It than uses +method_missing+
+# to seamingly map api requests to methods. There also is a generic ApiError
+# for handling MW's error messages. It ships with some methods - like
+# +page_content+ to ease interaction.
+#
+# Example:
+#
+#   require "mw_api"
+#
+#   # Displaying source of "Hauptseite" from German Wikipedia
+#   puts MediaWiki.wikipedia(:de).page_content("Hauptseite")
+#
+#   # Logging in a bot on some local wiki.
+#   wiki = MediaWiki.new "http://localhost/a_wiki/api.php"
+#   wiki.login :lgname => "MyBot", :lgpassword => "password123"
+#   # do something botish
+#   wiki.logout
+#
+# Note that MediaWiki#agent is an instance of Curb::Easy. Thus you can i.e.
+# load your firefox cookies and skip the login.
 class MediaWiki
 
+  # This is a Wrapper around MW's error messages, so you don't have to check
+  # the results for error messages.
   class ApiError < StandardError
 
     attr_reader :raw, :code, :info, :text
@@ -34,6 +64,7 @@ class MediaWiki
 
   end
 
+  # Short hand for wikipedia. Same options as for MediaWiki.new.
   def self.wikipedia lang = :en, options = {}
     if lang.is_a? Hash
       lang.symbolize_keys!
@@ -44,6 +75,10 @@ class MediaWiki
 
   attr_reader :agent
 
+  # Takes the URI to MW's api.php and additional options.
+  # Options are:
+  #   verbose    - set to true for verbose mode
+  #   user_agent - give a custom http user agent
   def initialize uri, options = {}
     options.symbolize_keys!
     options.reverse_merge! :verbose => false
@@ -61,18 +96,24 @@ class MediaWiki
     end
   end
 
+  # Are we in verbose mode?
   def verbose?
     @verbose
   end
 
+  # Turn on verbse mode.
   def verbose!
     @verbose = true
   end
 
+  # Turn off verbose mode.
   def silent!
     @verbose = false
   end
 
+  # Send a http request to the given url.
+  # HACK: Send post params in body (MW currently doesn't care).
+  # TODO: Some fall back should happen if curb is not available.
   def http_request url, post = false
      @mutex.synchronize do
       agent.url = url.to_s
@@ -81,6 +122,9 @@ class MediaWiki
     end
   end
 
+  # Generates and sends a request to api.php, parses the result. Parameter
+  # format will be ignored. Add :post => true to send POST request instead
+  # of GET request.
   def api_request *options
     options.flatten!
     uri       = URI.parse @uri
@@ -99,6 +143,7 @@ class MediaWiki
     result
   end
 
+  # Returns the wiki source for the given page name.
   def page_content name
     result = api :action => :query, :prop   => :revisions,
                  :titles => name,   :rvprop => :content
@@ -106,10 +151,14 @@ class MediaWiki
     result["query"]["pages"].first["revisions"].first["*"]
   end
 
+  # Returns the siteinfo.
   def siteinfo
     @siteinfo ||= api(:action => :query, :meta => :siteinfo)["query"]["general"]
   end
 
+  # Catches messages and tryes to send an api request. Does automaticly handle
+  # mustbeposted error (by sending POST request) and unknown_action (by calling
+  # super).
   def method_missing name, *options, &block
     begin
       params = options.extract_options!.symbolize_keys.merge :action => name
