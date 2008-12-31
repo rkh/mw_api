@@ -2,8 +2,6 @@
 
 class MediaWiki
 
-  VERSION = "0.0.1"
-
   class ApiError < StandardError
 
     attr_reader :raw, :code, :info, :text
