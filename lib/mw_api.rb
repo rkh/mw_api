@@ -135,7 +135,7 @@ class MediaWiki
     result    = http_request uri, post
     begin
       raise ArgumentError unless result && result[0..3] == "---\n"
-      result = YAML.load(result) || {}
+      result = YAML.load(result) || {} # This could raise an ArgumentError.
       raise ApiError, result if result.include? "error"
     rescue ArgumentError
       raise ApiError, result
