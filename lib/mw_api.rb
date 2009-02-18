@@ -1,5 +1,6 @@
 # TODO:
 # - get independend from active_support (I'm so sorry...)
+# - write unit tests (this is a hard one, sorry again)
 %w[ uri thread curb active_support ].each { |lib| require lib }
 
 # This is a generic interface to the MediaWiki API.
