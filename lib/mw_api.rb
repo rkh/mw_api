@@ -2,7 +2,7 @@
 # - get independend from active_support
 # - make curb optional
 # - run on rubinius
-%w[ rubygems uri thread curb active_support ].each { |lib| require lib }
+%w[ uri thread curb active_support ].each { |lib| require lib }
 
 # This is a generic interface to the MediaWiki API.
 # Instead of implementing all the API functions available (and thus probably
