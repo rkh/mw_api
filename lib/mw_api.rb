@@ -228,7 +228,7 @@ class MediaWiki
   #
   # Do yourself a favour and ask the wiki's admins for a bot flag. This
   # will increase your maximum limit.
-  def loop_trough params = {}, &block
+  def loop_through params = {}, &block
     params.symbolize_keys!
     if params.include? :list
       query_list = params[:list].to_s
