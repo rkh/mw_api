@@ -30,6 +30,9 @@
 class MediaWiki
 
   # Simple wrapper around MediaWiki#loop_through. Allowing stuff like:
+  #
+  #   # Do not try this unless you have a lot of time! Makes you recognize
+  #   # How big wikipedia realy is.
   #   MediaWiki.wikipedia.allpages.detect { |p| p["title"] ~= /^Foo/ }
   # This will not load a list of all pages, thus being somewhat more
   # efficient.
@@ -212,9 +215,9 @@ class MediaWiki
   end
 
   # For convinience.
-  def all_pages &block
-    return list(:all_pages) unless block_given?
-    loop_through :list => :all_pages, &block
+  def allpages params = {}, &block
+    return list(:allpages, params) unless block_given?
+    loop_through params.merge(:list => :allpages), &block
   end
 
   # Loop through some list or generator.
