@@ -159,7 +159,7 @@ class MediaWiki
 
   def generate_query params
     params.each do |key, value|
-      value.gsub!(/\n/, "") if value.is_a? String && key.to_s =~ /from$/
+      value.gsub!(/\n/, "") if value.is_a?(String) && key.to_s =~ /from$/
     end
     params.to_param
   end
