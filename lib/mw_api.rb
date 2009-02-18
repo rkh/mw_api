@@ -30,6 +30,20 @@
 # load your firefox cookies and skip the login.
 class MediaWiki
 
+  # Simple wrapper around MediaWiki#loop_through. Allowing stuff like:
+  #   MediaWiki.wikipedia.list(:allpages).detect { |p| p["title"] ~= /^Foo/ }
+  class Walker
+    include Enumerable
+
+    def each(&block)
+      @wiki.loop_through(@params, &block)
+    end
+
+    def initialize wiki, params
+      @wiki, @params = wiki, params
+    end
+  end
+
   # This is a Wrapper around MW's error messages, so you don't have to check
   # the results for error messages.
   class ApiError < StandardError
@@ -130,7 +144,7 @@ class MediaWiki
     uri       = URI.parse @uri
     params    = options.extract_options!.symbolize_keys.merge :format => :yaml
     post      = !!options.delete(:post)
-    uri.query = params.to_param
+    uri.query = generate_query params
     verbose "#{post ? "POST" : "GET"}: #{params.inspect}"
     result    = http_request uri, post
     begin
@@ -141,6 +155,13 @@ class MediaWiki
       raise ApiError, result
     end
     result
+  end
+
+  def generate_query params
+    params.each do |key, value|
+      value.gsub!(/\n/, "") if value.is_a? String && key.to_s =~ /from$/
+    end
+    params.to_param
   end
 
   # Returns the wiki source for the given page name.
@@ -169,6 +190,32 @@ class MediaWiki
       when "unknown_action"; super(name, *options, &block)
       else raise e
       end
+    end
+  end
+
+  # Loop through some list or generator.
+  # Keeps sending requests until you got all pages or whatever.
+  # Remember: You can always use break. Lower the limit parameter
+  # of your request to load less entries you won't look at if it is
+  # likely that you break up early. However, this does increase the
+  # number of http requests and the overhead. If you know you are
+  # going to loop through all entries, you want to set this to the
+  # largest value possible.
+  def loop_trough params = {}, &block
+    params.symbolize_keys!
+    if params.include? :list
+      query_list = params[:list].to_s
+      continue_list = params_list
+    else
+      query_list = "pages"
+      continue_list = params[:generator].to_s # Note: nil.to_s == ""
+    end
+    loop do
+      result = query params
+      break if result["query"][query_list].empty?
+      result["query"][query_list].each(&block)
+      break unless result["query-continue"] && result["query-continue"][continue_list]
+      params.merge! result["query-continue"][continue_list].symbolize_keys
     end
   end
 
