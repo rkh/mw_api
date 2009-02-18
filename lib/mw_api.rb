@@ -30,10 +30,7 @@
 class MediaWiki
 
   # Simple wrapper around MediaWiki#loop_through. Allowing stuff like:
-  #
-  #   # Do not try this unless you have a lot of time! Makes you recognize
-  #   # How big wikipedia realy is.
-  #   MediaWiki.wikipedia.allpages.detect { |p| p["title"] ~= /^Foo/ }
+  #  MediaWiki.wikipedia.allpages(:apfrom => "Font").detect { |p| p["title"] =~ /^Foo/ }
   # This will not load a list of all pages, thus being somewhat more
   # efficient.
   class Walker
