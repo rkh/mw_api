@@ -1,7 +1,5 @@
 # TODO:
-# - get independend from active_support
-# - make curb optional
-# - run on rubinius
+# - get independend from active_support (I'm so sorry...)
 %w[ uri thread curb active_support ].each { |lib| require lib }
 
 # This is a generic interface to the MediaWiki API.
@@ -31,7 +29,9 @@
 class MediaWiki
 
   # Simple wrapper around MediaWiki#loop_through. Allowing stuff like:
-  #   MediaWiki.wikipedia.list(:allpages).detect { |p| p["title"] ~= /^Foo/ }
+  #   MediaWiki.wikipedia.allpages.detect { |p| p["title"] ~= /^Foo/ }
+  # This will not load a list of all pages, thus being somewhat more
+  # efficient.
   class Walker
     include Enumerable
 
@@ -193,6 +193,29 @@ class MediaWiki
     end
   end
 
+  # Will give you the MediaWiki::Walker for the given list.
+  def list name, params = {}
+    params.symbolize_keys!
+    if name.is_a? Hash
+      params.merge! name.symbolize_keys
+    else
+      params[:list] = name
+    end
+    Walker.new self, params
+  end
+
+  # Like list, but with a generator
+  def generator name, params = {}
+    name = params.symbolize_keys.merge :generator => name unless name.is_a? Hash
+    list name
+  end
+
+  # For convinience.
+  def all_pages &block
+    return list(:all_pages) unless block_given?
+    loop_through :list => :all_pages, &block
+  end
+
   # Loop through some list or generator.
   # Keeps sending requests until you got all pages or whatever.
   # Remember: You can always use break. Lower the limit parameter
@@ -201,6 +224,9 @@ class MediaWiki
   # number of http requests and the overhead. If you know you are
   # going to loop through all entries, you want to set this to the
   # largest value possible.
+  #
+  # Do yourself a favour and ask the wiki's admins for a bot flag. This
+  # will increase your maximum limit.
   def loop_trough params = {}, &block
     params.symbolize_keys!
     if params.include? :list
@@ -225,6 +251,7 @@ class MediaWiki
 
   alias_method :api, :api_request
   alias_method :get, :page_content
+  alias_method :[], :page_content
 
   private
 
