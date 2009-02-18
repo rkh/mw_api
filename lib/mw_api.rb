@@ -205,7 +205,7 @@ class MediaWiki
     params.symbolize_keys!
     if params.include? :list
       query_list = params[:list].to_s
-      continue_list = params_list
+      continue_list = query_list
     else
       query_list = "pages"
       continue_list = params[:generator].to_s # Note: nil.to_s == ""
